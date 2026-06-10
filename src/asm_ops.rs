@@ -3,11 +3,11 @@ pub fn keys_equal(a: *const u8, b: *const u8) -> bool {
     let a0 = unsafe { (a as *const u64).read() };
     let b0 = unsafe { (b as *const u64).read() };
     let a1 = unsafe { (a.add(8) as *const u64).read() };
-    let b1 = unsafe { (b.add(8) as *const u64).read() }; // was a
+    let b1 = unsafe { (b.add(8) as *const u64).read() };
     let a2 = unsafe { (a.add(16) as *const u64).read() };
-    let b2 = unsafe { (b.add(16) as *const u64).read() }; // was a
+    let b2 = unsafe { (b.add(16) as *const u64).read() };
     let a3 = unsafe { (a.add(24) as *const u64).read() };
-    let b3 = unsafe { (b.add(24) as *const u64).read() }; // was a
+    let b3 = unsafe { (b.add(24) as *const u64).read() };
     ((a0 ^ b0) | (a1 ^ b1) | (a2 ^ b2) | (a3 ^ b3)) == 0
 }
 

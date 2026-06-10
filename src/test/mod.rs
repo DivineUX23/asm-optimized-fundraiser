@@ -7,7 +7,7 @@ mod tests {
         CreateAssociatedTokenAccount, CreateMint, MintTo,
         spl_token::{self},
     };
-    use solana_sdk::clock::Clock;
+    use solana_sdk::{clock::Clock, sysvar::SysvarId};
     use solana_instruction::{AccountMeta, Instruction};
     use solana_keypair::Keypair;
     use solana_message::Message;
@@ -15,7 +15,6 @@ mod tests {
     use solana_pubkey::Pubkey;
     use solana_signer::Signer;
     use solana_transaction::Transaction;
-
     const TOKEN_PROGRAM_ID: Pubkey = spl_token::ID;
     const SECONDS_TO_DAYS: i64 = 86_400;
     const DECIMALS: u8 = 6;
@@ -239,6 +238,10 @@ mod tests {
 
         let (contributor_account, contributor_bump) = contributor_pda(&contributor.pubkey());
 
+        //let mut clock = Clock::default();
+        //let clock_sysvar = clock.unix_timestamp;
+        //let clock_address = clock_sysvar.to_le_bytes().as_ptr();
+        let clock_address = Clock::id();
         let ix = Instruction {
             program_id: program_id(),
             accounts: vec![
@@ -248,6 +251,7 @@ mod tests {
                 AccountMeta::new(contributor_account, false),
                 AccountMeta::new(contributor_ata, false),
                 AccountMeta::new(vault, false),
+                AccountMeta::new(clock_address, false),
                 AccountMeta::new_readonly(system_program(), false),
                 AccountMeta::new_readonly(TOKEN_PROGRAM_ID, false),
                 AccountMeta::new_readonly(ata_program(), false),
@@ -354,6 +358,8 @@ mod tests {
     ) {
         set_clock(svm, active_timestamp);
 
+        let clock_address = Clock::id();
+
         let ix = Instruction {
 
             program_id: program_id(),
@@ -366,6 +372,7 @@ mod tests {
                 AccountMeta::new(*contributor_account, false),
                 AccountMeta::new(*contributor_ata, false),
                 AccountMeta::new(*vault, false),
+                AccountMeta::new(clock_address, false),
                 AccountMeta::new_readonly(system_program(), false),
                 AccountMeta::new_readonly(TOKEN_PROGRAM_ID, false),
             ],
@@ -540,6 +547,8 @@ mod tests {
 
             let (contributor_account, contributor_bump) = contributor_pda(&next_contributor.pubkey());
 
+            let clock_address = Clock::id();
+
             let contribute_ix = Instruction {
                 program_id: program_id(),
                 accounts: vec![
@@ -549,6 +558,7 @@ mod tests {
                     AccountMeta::new(contributor_account, false),
                     AccountMeta::new(next_ata, false),
                     AccountMeta::new(vault, false),
+                    AccountMeta::new(clock_address, false),
                     AccountMeta::new_readonly(system_program(), false),
                     AccountMeta::new_readonly(TOKEN_PROGRAM_ID, false),
                     AccountMeta::new_readonly(ata_program(), false),

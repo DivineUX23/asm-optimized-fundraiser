@@ -4,7 +4,7 @@ use crate::{Account, asm_ops::{read_token_amount, validate_ata},
     state::{Contributor, Fundraiser}};
 
 #[inline(always)]
-pub fn process_refund_instruction(accounts: &[Account; 9], data: &[u8]) -> Result<(), u32> {
+pub fn process_refund_instruction(accounts: &[Account; 10], data: &[u8]) -> Result<(), u32> {
 
     let contributor = accounts[0];
     let maker = accounts[1];
@@ -13,8 +13,9 @@ pub fn process_refund_instruction(accounts: &[Account; 9], data: &[u8]) -> Resul
     let contributor_account = accounts[4];
     let contributor_ata = accounts[5];
     let vault = accounts[6];
-    let _system_program = accounts[7];
-    let _token_program = accounts[8];
+    let clock_sysvar = accounts[7];
+    let _system_program = accounts[8];
+    let _token_program = accounts[9];
     
 
     if !validate_ata(
@@ -32,9 +33,15 @@ pub fn process_refund_instruction(accounts: &[Account; 9], data: &[u8]) -> Resul
 
     let contributor_data = Contributor::from_ptr(contributor_account.data());
 
+    /*
     let current_time = {
         use pinocchio::sysvars::{Sysvar, clock::Clock};
         Clock::get().unwrap().unix_timestamp
+    };
+    */
+    let current_time = {
+        let clock_data = clock_sysvar.data();
+        unsafe { ( clock_data.add(32) as *const i64 ).read_unaligned() }
     };
 
     if fundraiser_data.duration < ((current_time - fundraiser_data.time_started())/SECONDS_TO_DAYS) as u8 {

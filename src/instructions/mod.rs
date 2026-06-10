@@ -7,7 +7,7 @@ pub use initialize::*;
 pub use checker::*;
 pub use contribute::*;
 pub use refund::*;
-
+/* 
 use pinocchio::error::ProgramError;
 
 pub enum FundraiserInstructions {
@@ -30,3 +30,5 @@ impl TryFrom<&u8> for FundraiserInstructions {
         }
     }
 }
+
+    */

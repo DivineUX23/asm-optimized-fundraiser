@@ -7,7 +7,7 @@ use crate::{Account,
     ID_BYTES};
 
 #[inline(always)]
-pub fn process_initialize_instruction(accounts: &[Account; 9], data: &[u8]) -> Result<(), u32> {
+pub fn process_initialize_instruction(accounts: &[Account; 10], data: &[u8]) -> Result<(), u32> {
     let maker= accounts[0];
     let mint_to_raise= accounts[1];
     let fundraiser= accounts[2];
@@ -35,7 +35,7 @@ pub fn process_initialize_instruction(accounts: &[Account; 9], data: &[u8]) -> R
         1_000_000, 10_000_000, 100_000_000, 1_000_000_000,
     ];
 
-    let scale = *unsafe { POWERS_OF_10.get_unchecked(decimals as usize) };
+    let scale = unsafe { *POWERS_OF_10.get_unchecked(decimals as usize) };
 
     let scaled_min = MIN_AMOUNT_TO_RAISE * scale;
     if amount_to_raise < scaled_min {

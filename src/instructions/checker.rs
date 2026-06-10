@@ -2,7 +2,7 @@ use pinocchio::cpi::{Seed, Signer};
 use crate::{Account, read_token_amount, state::Fundraiser, validate_ata};
 
 #[inline(always)]
-pub fn process_checker_instruction(accounts: &[Account; 9], data: &[u8]) -> Result<(), u32> {
+pub fn process_checker_instruction(accounts: &[Account; 10], data: &[u8]) -> Result<(), u32> {
     let maker = accounts[0];
     let mint_to_raise = accounts[1];
     let fundraiser = accounts[2];

@@ -101,47 +101,40 @@ impl Account {
 #[inline(always)]
 unsafe fn parse_input(
     input: *mut u8,
-    out: &mut [Account; 9],
+    out: &mut [Account; 10],
 ) -> (&'static [u8], *const [u8; 32]) {
     let num_accounts = unsafe { *(input as *const u64) } as usize;
     let mut ptr = unsafe { input.add(8) }; // shift point to after discriminator
 
 
 
-let count = num_accounts.min(9);
-let mut i = 0;
+    let count = num_accounts.min(9);
+    let mut i = 0;
 
-while i < num_accounts {  // walk ALL accounts, not just count
-    let dup = unsafe { *ptr };
-    if dup == NON_DUP_MARKER {
-        let data_len = unsafe { (ptr.add(80) as *const u64).read() } as usize;
+    while i < num_accounts {  // walk ALL accounts, not just count
+        let dup = unsafe { *ptr };
+        if dup == NON_DUP_MARKER {
+            let data_len = unsafe { (ptr.add(80) as *const u64).read() } as usize;
 
-        if i < count {
-            out[i] = Account(ptr);
+            if i < count {
+                out[i] = Account(ptr);
+            }
+
+            ptr = unsafe { ptr.add(88 + data_len + MAX_PERMITTED_DATA_INCREASE + 8) };
+            ptr = ((ptr as usize + 7) & !7) as *mut u8;
+
+        } else {
+            if i < count {
+                out[i] = out[dup as usize];
+            }
+            ptr = unsafe { ptr.add(8) };
         }
 
-        ptr = unsafe { ptr.add(88 + data_len + MAX_PERMITTED_DATA_INCREASE + 8) };
-        ptr = ((ptr as usize + 7) & !7) as *mut u8;
-
-    } else {
-        if i < count {
-            out[i] = out[dup as usize];
-        }
-        ptr = unsafe { ptr.add(8) };
+        i += 1;
     }
-
-    i += 1;
-}
 
 
     let ix_len = unsafe { *(ptr as *const u64) } as usize; // reading the length of datas
-
-    
-    if ix_len > 1000 {
-        // ptr walked off — ix_len would be garbage
-        // return empty slice to trigger the is_empty() check
-        return (core::slice::from_raw_parts(ptr as *const u8, 0), ptr as *const [u8; 32]);
-    }
 
     ptr = unsafe { ptr.add(8) };
     let ix_data = unsafe { core::slice::from_raw_parts(ptr as *const u8, ix_len) };
@@ -154,7 +147,7 @@ while i < num_accounts {  // walk ALL accounts, not just count
 //#[cfg(target_os = "solana")]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn entrypoint(input: *mut u8) -> u64 {
-    let mut accounts  = [Account(core::ptr::null_mut()); 9];
+    let mut accounts  = [Account(core::ptr::null_mut()); 10];
 
     //let accounts = pinocchio::account_info::AccountInfo::from_raw(input);
 
