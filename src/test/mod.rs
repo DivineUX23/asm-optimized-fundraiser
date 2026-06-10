@@ -18,7 +18,6 @@ mod tests {
     const TOKEN_PROGRAM_ID: Pubkey = spl_token::ID;
     const SECONDS_TO_DAYS: i64 = 86_400;
     const DECIMALS: u8 = 6;
-    use crate::Account;
 
     fn min_raise() -> u64 {
         crate::constants::MIN_AMOUNT_TO_RAISE
