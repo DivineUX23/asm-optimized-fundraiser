@@ -1,95 +1,77 @@
-use pinocchio::{
-    AccountView, ProgramResult, cpi::{Seed, Signer}, error::ProgramError, sysvars::{Sysvar, clock::Clock}
-};
-use pinocchio_pubkey::derive_address;
+use pinocchio::cpi::{Seed, Signer};
+use crate::{Account, asm_ops::{read_token_amount, validate_ata},
+    constants::SECONDS_TO_DAYS,
+    state::{Contributor, Fundraiser}};
 
-use crate::{state::{Fundraiser, Contributor}, SECONDS_TO_DAYS};
+#[inline(always)]
+pub fn process_refund_instruction(accounts: &[Account; 9], data: &[u8]) -> Result<(), u32> {
 
-pub fn process_refund_instruction(accounts: &mut [AccountView], data: &[u8]) -> ProgramResult {
-    let [
-        contributor,
-        maker,
-        mint_to_raise,
-        fundraiser,
-        contributor_account,
-        contributor_ata,
-        vault,
-        _system_program,
-        _token_program,
-    ] = accounts 
-    else {
-        return Err(ProgramError::NotEnoughAccountKeys)
+    let contributor = accounts[0];
+    let maker = accounts[1];
+    let mint_to_raise = accounts[2];
+    let fundraiser = accounts[3];
+    let contributor_account = accounts[4];
+    let contributor_ata = accounts[5];
+    let vault = accounts[6];
+    let _system_program = accounts[7];
+    let _token_program = accounts[8];
+    
+
+    if !validate_ata(
+        contributor_ata.data(), 
+        mint_to_raise.key() as *const u8, 
+        contributor.key() as *const u8
+    ) {
+        return Err(21);
+    }
+
+    let bump = unsafe { *( data.as_ptr() ) };
+
+    let fundraiser_data = Fundraiser::from_ptr(fundraiser.data());
+
+
+    let contributor_data = Contributor::from_ptr(contributor_account.data());
+
+    let current_time = {
+        use pinocchio::sysvars::{Sysvar, clock::Clock};
+        Clock::get().unwrap().unix_timestamp
     };
 
-    {
-        let contributor_ata_state = pinocchio_token::state::Account::from_account_view(contributor_ata)?;
-        if contributor_ata_state.owner() != contributor.address() {
-            return Err(ProgramError::IllegalOwner);
-        }
-        
-        if contributor_ata_state.mint() != mint_to_raise.address() {
-            return Err(ProgramError::InvalidAccountData);
-        }
-        
-    }
-
-    let bump = data[0];
-    let contributor_bump = data[1];
-
-    let seed = [b"contributor".as_ref(), contributor.address().as_ref(), &[contributor_bump]];
-
-    let contributor_account_pda = derive_address(&seed, None, &crate::ID.to_bytes());
-    //assert_eq!(contributor_account_pda, *contributor_account.address().as_array());
-    if contributor_account_pda != *contributor_account.address().as_array() {
-
-        return Err(ProgramError::InvalidAccountData);
-    }
-
-
-    let fundraiser_data = Fundraiser::from_account_info(fundraiser)?;
-
-    if fundraiser_data.maker() != maker.address() {
-        return Err(ProgramError::InvalidAccountData);
-    }
-
-    let contributor_data = Contributor::from_account_info(contributor_account)?;
-
-    let current_time = Clock::get()?.unix_timestamp;
     if fundraiser_data.duration < ((current_time - fundraiser_data.time_started())/SECONDS_TO_DAYS) as u8 {
-        return Err(ProgramError::InvalidArgument);
+        return Err(20);
     }
 
-    let vault_data = unsafe {vault.borrow_unchecked()};
-    let vault_amount = u64::from_le_bytes(vault_data[64..72].try_into().unwrap());
+    let vault_amount = read_token_amount(vault.data());
 
-    if vault_amount > fundraiser_data.amount_to_raise() {
-        return Err(ProgramError::InvalidArgument);
+    if vault_amount >= fundraiser_data.amount_to_raise() {
+        return Err(20);
     }
 
-    let fund_amount = fundraiser_data.current_amount() - contributor_data.amount();
-    fundraiser_data.set_current_amount(fund_amount);
+    fundraiser_data.set_current_amount(fundraiser_data.current_amount() - contributor_data.amount());
 
 
     let bump_bytes = [bump];
     let signer_seeds = [
         Seed::from(b"fundraiser"),
-        Seed::from(maker.address().as_array()),
+        Seed::from(maker.key()),
         Seed::from(bump_bytes.as_ref()),
     ];
     let signer = Signer::from(&signer_seeds);
 
 
-    pinocchio_token::instructions::Transfer::new(vault, contributor_ata, fundraiser, contributor_data.amount())
-        .invoke_signed(&[signer])?;
+    let _ = pinocchio_token::instructions::Transfer::new(
+        unsafe { &*(&vault as *const Account as *const _) }, 
+        unsafe { &*(&contributor_ata as *const Account as *const _) }, 
+        unsafe { &*(&fundraiser as *const Account as *const _) },
+        contributor_data.amount()
+    )
+        .invoke_signed(&[signer]);
 
-    let contributor_account_lamports = contributor_account.lamports();
 
+    contributor.set_lamport(contributor.lamports() + contributor_account.lamports());
+    contributor_account.set_lamport(0);
 
-    contributor.set_lamports(contributor.lamports() + contributor_account_lamports);
-    contributor_account.set_lamports(0);
-
-
-    let _ = contributor_account.close();
+    //let _ = contributor_account.close();
 
     Ok(())
 }

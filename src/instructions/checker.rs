@@ -1,60 +1,57 @@
-use pinocchio::{
-    AccountView, ProgramResult, cpi::{Seed, Signer}, error::ProgramError
-};
-use crate::state::{Fundraiser};
+use pinocchio::cpi::{Seed, Signer};
+use crate::{Account, read_token_amount, state::Fundraiser, validate_ata};
 
-pub fn process_checker_instruction(accounts: &mut [AccountView], data: &[u8]) -> ProgramResult {
-    let [
-        maker,
-        mint_to_raise,
-        fundraiser,
-        vault,
-        maker_ata,
-        _system_program,
-        _token_program,
-    ] = accounts 
-    else {
-        return Err(ProgramError::NotEnoughAccountKeys)
-    };
+#[inline(always)]
+pub fn process_checker_instruction(accounts: &[Account; 9], data: &[u8]) -> Result<(), u32> {
+    let maker = accounts[0];
+    let mint_to_raise = accounts[1];
+    let fundraiser = accounts[2];
+    let vault = accounts[3];
+    let maker_ata = accounts[4];
+    let _system_program = accounts[5];
+    let _token_program = accounts[6];
 
-    {
-        let maker_ata_state = pinocchio_token::state::Account::from_account_view(maker_ata)?;
-        if maker_ata_state.owner() != maker.address() {
-            return Err(ProgramError::IllegalOwner);
-        }
-        if maker_ata_state.mint() != mint_to_raise.address() {
-            return Err(ProgramError::InvalidAccountData);
-        }
+
+    if !validate_ata(
+        maker_ata.data(), 
+        mint_to_raise.key() as *const u8, 
+        maker.key() as *const u8
+    ) {
+        return Err(21);
     }
 
-    let fundraiser_data = Fundraiser::from_account_info(fundraiser)?;
+    let bump = unsafe { *( data.as_ptr() ) };
 
-    let vault_data = unsafe {vault.borrow_unchecked()};
-    let vault_amount = u64::from_le_bytes(vault_data[64..72].try_into().unwrap());
+    let fundraiser_data = Fundraiser::from_ptr(fundraiser.data());
+
+    let vault_amount = read_token_amount(vault.data());
 
     if vault_amount < fundraiser_data.amount_to_raise() {
-        return Err(ProgramError::InvalidArgument);
+        return Err(20);
     }
 
-    let bump = data[0];
 
     let bump_bytes = [bump];
     let signer_seeds = [
         Seed::from(b"fundraiser"),
-        Seed::from(maker.address().as_array()),
+        Seed::from(fundraiser_data.maker()),
         Seed::from(bump_bytes.as_ref()),
     ];
     let signer = Signer::from(&signer_seeds);
 
 
-    pinocchio_token::instructions::Transfer::new(vault, maker_ata, fundraiser, vault_amount)
-        .invoke_signed(&[signer])?;
+    let _ = pinocchio_token::instructions::Transfer::new(
+        unsafe { &*(&vault as *const Account as *const _) },
+        unsafe { &*(&maker_ata as *const Account as *const _) },
+        unsafe { &*(&fundraiser as *const Account as *const _) },
+        vault_amount
+    ).invoke_signed(&[signer]);
 
-    let fundraiser_lamports = fundraiser.lamports();
-    maker.set_lamports(maker.lamports() + fundraiser_lamports);
-    fundraiser.set_lamports(0);
 
-    let _ = fundraiser.close();
+    maker.set_lamport(maker.lamports() + fundraiser.lamports());
+    fundraiser.set_lamport(0);
+
+    //let _ = fundraiser.close();
 
     Ok(())
 }

@@ -1,4 +1,4 @@
-use pinocchio::{AccountView, error::ProgramError};
+use crate::asm_ops::{read_u64_at, write_u64_at};
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -9,19 +9,27 @@ pub struct Contributor {
 impl Contributor {
     pub const LEN: usize = 8;
 
-    pub fn from_account_info(account_info: &mut AccountView) -> Result<&mut Self, ProgramError> {
-        let data = unsafe { account_info.borrow_unchecked_mut() };
-        if data.len() != Contributor::LEN {
-            return Err(ProgramError::InvalidAccountData);
+    #[inline(always)]
+    pub fn from_ptr(data: *mut u8) -> &'static mut Self {
+        unsafe { &mut *(data as *mut Self) }
+    }
+
+    #[inline(always)]
+    pub fn from_ptr_checked(data: *mut u8, len: usize) -> Result<&'static mut Self, u32> {
+
+        if len != Self::LEN {
+            return Err(0x2);
         }
-        Ok(unsafe { &mut *(data.as_mut_ptr() as *mut Self) })
+        Ok(Self::from_ptr(data))
     }
 
+    #[inline(always)]
     pub fn amount(&self) -> u64 {
-        u64::from_le_bytes(self.amount)
+        read_u64_at::<0>(self.amount.as_ptr())
     }
 
+    #[inline(always)]
     pub fn set_amount(&mut self, amount: u64) {
-        self.amount = amount.to_le_bytes()
+        write_u64_at::<0>(self.amount.as_mut_ptr(), amount);
     }
 }

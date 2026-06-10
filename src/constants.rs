@@ -1,4 +1,30 @@
 pub const MIN_AMOUNT_TO_RAISE: u64 = 3;
 pub const SECONDS_TO_DAYS: i64 = 86400;
-pub const MAX_CONTRIBUTION_PERCENTAGE: u64 = 10;
-pub const PERCENTAGE_SCALER: u64 = 100;
+
+pub const MAX_CONTRIBUTION_DENOMINATOR: u64 = 10;
+//pub const PERCENTAGE_SCALER: u64 = 100;
+
+pub const FUNDRAISER_RENT_EXEMPT: u64 = (90 + 128) * 6960;
+pub const CONTRIBUTOR_RENT_EXEMPT: u64 = (8 + 128) * 6960;
+
+pub const TOKEN2022_PROGRAM_ID: [u8; 32] = [
+    6,221,246,225,238,117,143,222,24,23,
+    232,141,224,114,187,50,187,250,69,62,
+    137,51,245,135,28,133,202,253,105,31,
+    119,42
+];
+
+pub const TOKEN_PROGRAM_ID: [u8; 32] = [
+  6, 221, 246, 225, 215, 101, 163, 16, 242, 11, 
+  142, 137, 10, 110, 151, 155, 60, 241, 234, 144, 
+  192, 12, 100, 101, 223, 219, 217, 219, 136, 172, 
+  240, 190
+];
+
+pub const SYSTEM_PROGRAM_ID: [u8; 32] = [0u8; 32];
+
+pub const TOKEN_AMOUNT_OFFSET: usize = 64;
+
+pub const MINT_DECIMALS_OFFSET: usize = 44;
+
+pub const TOKEN_OWNER_OFFSET: usize = 32;

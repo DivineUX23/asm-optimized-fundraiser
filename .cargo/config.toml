@@ -1,0 +1,10 @@
+#[build]
+#target = "sbf-solana-solana"
+
+[target.sbf-solana-solana]
+rustflags = [
+    "-C", "target-cpu=generic",
+    "-C", "link-arg=--strip-all",
+    "-C", "link-arg=-z", "-C", "link-arg=norelro",
+    "-C", "link-arg=-icf=all",
+]

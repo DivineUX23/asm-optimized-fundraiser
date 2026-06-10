@@ -19,10 +19,10 @@ mod tests {
     const TOKEN_PROGRAM_ID: Pubkey = spl_token::ID;
     const SECONDS_TO_DAYS: i64 = 86_400;
     const DECIMALS: u8 = 6;
-
+    use crate::Account;
 
     fn min_raise() -> u64 {
-        crate::MIN_AMOUNT_TO_RAISE
+        crate::constants::MIN_AMOUNT_TO_RAISE
             .checked_mul(10u64.pow(DECIMALS as u32))
             .unwrap()
     }
@@ -47,6 +47,7 @@ mod tests {
     }
 
     fn setup() -> (LiteSVM, Keypair) {
+        eprintln!("Loading .so from: {:?}", so_path());
         let mut svm = LiteSVM::new();
         let payer = Keypair::new();
         svm.airdrop(&payer.pubkey(), 10 * LAMPORTS_PER_SOL)
